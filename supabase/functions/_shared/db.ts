@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2.49.1";
 import { AppSettings, LocationRulesSettings, ProfileSettings } from "./types.ts";
 
 const DEFAULT_PROFILE: ProfileSettings = {

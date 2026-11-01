@@ -20,13 +20,13 @@ select cron.schedule(
     select net.http_post(
       url := coalesce(
         (select decrypted_secret from vault.decrypted_secrets where name = 'project_url' limit 1),
-        'http://localhost:54321'
+        'https://jcmfngjfdcvizsjcfcbo.supabase.co'
       ) || '/functions/v1/collect',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
         'x-cron-secret', coalesce(
           (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret' limit 1),
-          'dev-cron-secret'
+          'remote-job-radar-portal'
         )
       ),
       body := '{}'::jsonb,
