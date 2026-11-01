@@ -4,6 +4,7 @@ import { greenhouseAdapter } from "./greenhouse.ts";
 import { leverAdapter } from "./lever.ts";
 import { remotiveAdapter } from "./remotive.ts";
 import { arbeitnowAdapter } from "./arbeitnow.ts";
+import { customHtmlAdapter } from "./custom_html.ts";
 
 const registry: Record<AtsName, Adapter> = {
   greenhouse: greenhouseAdapter,
@@ -11,6 +12,7 @@ const registry: Record<AtsName, Adapter> = {
   ashby: ashbyAdapter,
   remotive: remotiveAdapter,
   arbeitnow: arbeitnowAdapter,
+  custom_html: customHtmlAdapter,
 };
 
 export function getAdapter(ats: string): Adapter | undefined {

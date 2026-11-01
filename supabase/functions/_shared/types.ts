@@ -1,6 +1,6 @@
 /// <reference path="../deno.d.ts" />
 
-export type AtsName = "greenhouse" | "lever" | "ashby" | "remotive" | "arbeitnow";
+export type AtsName = "greenhouse" | "lever" | "ashby" | "remotive" | "arbeitnow" | "custom_html";
 
 export type LocationClass = "eligible" | "restricted" | "unknown";
 

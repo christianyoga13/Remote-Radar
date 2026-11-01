@@ -38,13 +38,19 @@ export function AddCompanyForm() {
         <option value="lever">Lever</option>
         <option value="remotive">Remotive (Public Feed)</option>
         <option value="arbeitnow">Arbeitnow (Public Feed)</option>
+        <option value="custom_html">Direct Career Page (HTML/SPA)</option>
       </select>
       <input
         type="text"
-        placeholder="ATS slug (e.g. linear)"
+        placeholder={
+          ats === "custom_html"
+            ? "Career URL (e.g. https://careers.company.com)"
+            : "ATS slug (e.g. linear)"
+        }
         value={slug}
         onChange={(e) => setSlug(e.target.value)}
         required
+        style={{ flex: ats === "custom_html" ? 1 : undefined }}
       />
       <input
         type="url"

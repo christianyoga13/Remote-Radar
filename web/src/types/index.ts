@@ -44,7 +44,8 @@ export type AtsType =
   | "smartrecruiters"
   | "recruitee"
   | "remotive"
-  | "arbeitnow";
+  | "arbeitnow"
+  | "custom_html";
 
 export interface Company {
   id: number;
