@@ -7,31 +7,66 @@ import { CompanyRow, truncateDescription } from "../_shared/types.ts";
 const BATCH_SIZE = 8;
 const REQUEST_TIMEOUT_MS = 10_000;
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-cron-secret",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight for browser dashboard calls
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  // Step 1: Validate x-cron-secret header (mandatory when deployed with --no-verify-jwt)
-  const expectedSecret = Deno.env.get("CRON_SECRET");
-  const providedSecret = req.headers.get("x-cron-secret");
-  if (!expectedSecret || providedSecret !== expectedSecret) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
   const supabase = createServiceClient();
+
+  // Step 1: Validate authorization (via x-cron-secret header OR authenticated Supabase user)
+  const expectedSecret = Deno.env.get("CRON_SECRET");
+  const providedSecret = req.headers.get("x-cron-secret");
+  const authHeader = req.headers.get("authorization");
+
+  let isAuthorized = false;
+  if (expectedSecret && providedSecret === expectedSecret) {
+    isAuthorized = true;
+  } else if (authHeader) {
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (user) {
+      isAuthorized = true;
+    }
+  }
+
+  if (!isAuthorized) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Parse optional company_id for single-company fetch
+  const body = await req.json().catch(() => ({}));
+  const specificCompanyId = body?.company_id ? Number(body.company_id) : null;
+
   const startedAt = new Date().toISOString();
 
   // Create run record upfront
   const { data: runRow } = await supabase
     .from("runs")
-    .insert({ started_at: startedAt })
+    .insert({
+      started_at: startedAt,
+      notes: specificCompanyId
+        ? `manual single fetch: company #${specificCompanyId}`
+        : "batch collect",
+    })
     .select("id")
     .single();
   const runId: number | undefined = runRow?.id;
@@ -43,17 +78,37 @@ Deno.serve(async (req: Request) => {
   const notes: string[] = [];
 
   try {
-    // Step 2 & 3: Claim up to 8 companies and load settings
-    const [{ data: companiesData, error: claimErr }, settings] = await Promise.all([
-      supabase.rpc("claim_companies", { batch_size: BATCH_SIZE }),
-      loadSettings(supabase),
-    ]);
+    // Step 2 & 3: Load companies (specific or batch) and settings
+    let companies: CompanyRow[] = [];
+    let settings;
 
-    if (claimErr) {
-      throw new Error(`claim_companies failed: ${claimErr.message}`);
+    if (specificCompanyId) {
+      const [{ data: compData, error: compErr }, loadedSettings] =
+        await Promise.all([
+          supabase
+            .from("companies")
+            .select("*")
+            .eq("id", specificCompanyId)
+            .single(),
+          loadSettings(supabase),
+        ]);
+      if (compErr || !compData) {
+        throw new Error(`Company #${specificCompanyId} not found`);
+      }
+      companies = [compData as CompanyRow];
+      settings = loadedSettings;
+    } else {
+      const [{ data: companiesData, error: claimErr }, loadedSettings] =
+        await Promise.all([
+          supabase.rpc("claim_companies", { batch_size: BATCH_SIZE }),
+          loadSettings(supabase),
+        ]);
+      if (claimErr) {
+        throw new Error(`claim_companies failed: ${claimErr.message}`);
+      }
+      companies = (companiesData || []) as CompanyRow[];
+      settings = loadedSettings;
     }
-
-    const companies = (companiesData || []) as CompanyRow[];
 
     // Step 4: Fetch ATS endpoints in parallel with 10s timeout per company
     const outcomes = await Promise.allSettled(
@@ -79,7 +134,8 @@ Deno.serve(async (req: Request) => {
           ? outcome.reason.message
           : String(outcome.reason);
         const nextFailCount = (company.fail_count || 0) + 1;
-        const shouldDeactivate = nextFailCount >= settings.profile.max_fail_count;
+        const shouldDeactivate =
+          nextFailCount >= settings.profile.max_fail_count;
 
         await supabase
           .from("companies")
@@ -98,23 +154,29 @@ Deno.serve(async (req: Request) => {
       const nowIso = new Date().toISOString();
 
       // Fetch existing active external_ids and archived tombstones for this company
-      const [{ data: existingRows }, { data: tombstoneRows }] = await Promise.all([
-        supabase
-          .from("jobs")
-          .select("id, external_id, closed_at")
-          .eq("company_id", company.id),
-        supabase
-          .from("job_tombstones")
-          .select("external_id")
-          .eq("company_id", company.id),
-      ]);
+      const [{ data: existingRows }, { data: tombstoneRows }] =
+        await Promise.all([
+          supabase
+            .from("jobs")
+            .select("id, external_id, closed_at")
+            .eq("company_id", company.id),
+          supabase
+            .from("job_tombstones")
+            .select("external_id")
+            .eq("company_id", company.id),
+        ]);
 
-      const existingMap = new Map<string, { id: number; closed_at: string | null }>();
+      const existingMap = new Map<
+        string,
+        { id: number; closed_at: string | null }
+      >();
       for (const r of existingRows || []) {
         existingMap.set(r.external_id, { id: r.id, closed_at: r.closed_at });
       }
       const tombstoneSet = new Set<string>(
-        (tombstoneRows || []).map((t: { external_id: string }) => t.external_id),
+        (tombstoneRows || []).map((t: { external_id: string }) =>
+          t.external_id
+        ),
       );
 
       const seenExternalIds = new Set<string>();
@@ -125,7 +187,11 @@ Deno.serve(async (req: Request) => {
           jobsNew++;
         }
         const locationClass = classifyLocation(job, settings.locationRules);
-        const matchScore = computeMatchScore(job, settings.profile, locationClass);
+        const matchScore = computeMatchScore(
+          job,
+          settings.profile,
+          locationClass,
+        );
 
         return {
           company_id: company.id,
@@ -176,6 +242,7 @@ Deno.serve(async (req: Request) => {
         .update({
           fail_count: 0,
           last_status: `ok (${fetchedJobs.length} jobs)`,
+          last_fetched_at: nowIso,
         })
         .eq("id", company.id);
 
@@ -191,20 +258,24 @@ Deno.serve(async (req: Request) => {
     if (claimJobsErr) {
       notes.push(`claim_unnotified_jobs error: ${claimJobsErr.message}`);
     } else if (claimedJobs && claimedJobs.length > 0) {
-      const list = claimedJobs as NotifiableJob[];
-      const sent = await sendTelegramDigest(list, AbortSignal.timeout(REQUEST_TIMEOUT_MS));
-      if (!sent) {
-        // Roll back notified_at = null so the next run retries delivery
-        const failedIds = list.map((j) => j.id);
+      const telegramOk = await sendTelegramDigest(
+        claimedJobs as NotifiableJob[],
+        AbortSignal.timeout(10_000),
+      );
+
+      if (!telegramOk) {
+        const unnotifiedIds = (claimedJobs as NotifiableJob[]).map((j) => j.id);
         await supabase
           .from("jobs")
           .update({ notified_at: null })
-          .in("id", failedIds);
-        notes.push(`telegram delivery failed; rolled back ${failedIds.length} jobs`);
+          .in("id", unnotifiedIds);
+        notes.push(
+          `telegram delivery failed; rolled back ${unnotifiedIds.length} jobs`,
+        );
       }
     }
 
-    // Step 9: Finalize run log
+    // Step 9: Finalize run record
     const finishedAt = new Date().toISOString();
     if (runId) {
       await supabase
@@ -229,7 +300,10 @@ Deno.serve(async (req: Request) => {
         jobs_closed: jobsClosed,
         notes,
       }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -248,7 +322,7 @@ Deno.serve(async (req: Request) => {
     }
     return new Response(JSON.stringify({ ok: false, error: msg }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

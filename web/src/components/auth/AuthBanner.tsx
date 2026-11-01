@@ -14,6 +14,9 @@ export function AuthBanner() {
     handleMagicLinkLogin,
     handleSignOut,
     fetchAllFromSupabase,
+    isFetchingJobs,
+    fetchStatusMessage,
+    triggerManualFetch,
   } = useDashboard();
 
   if (!isConfigured) {
@@ -31,44 +34,100 @@ export function AuthBanner() {
     );
   }
 
-  if (!userEmail) {
-    return (
-      <div className="banner">
-        <form
-          onSubmit={handleMagicLinkLogin}
-          style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}
-        >
-          <strong>Supabase Auth (RLS Protected):</strong>
-          <input
-            type="email"
-            placeholder="owner@example.com"
-            value={loginEmail}
-            onChange={(e) => setLoginEmail(e.target.value)}
-            required
-          />
-          <button type="submit" className="btn btn-primary">
-            Send Magic Link
-          </button>
-          {authMsg && <span style={{ fontSize: 12 }}>{authMsg}</span>}
-        </form>
-      </div>
-    );
-  }
-
   return (
-    <div className="banner" style={{ borderLeftColor: "var(--accent)" }}>
-      <div>
-        Signed in as <strong>{userEmail}</strong>{" "}
-        {loading && "(Syncing...)"}
+    <div
+      className="banner"
+      style={{
+        borderLeftColor: "var(--accent)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
+        }}
+      >
+        {!userEmail ? (
+          <form
+            onSubmit={handleMagicLinkLogin}
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <strong>Supabase Auth:</strong>
+            <input
+              type="email"
+              placeholder="owner@example.com"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              required
+            />
+            <button type="submit" className="btn btn-primary">
+              Send Magic Link
+            </button>
+            {authMsg && <span style={{ fontSize: 12 }}>{authMsg}</span>}
+          </form>
+        ) : (
+          <div>
+            Signed in as <strong>{userEmail}</strong>{" "}
+            {loading && "(Syncing...)"}
+          </div>
+        )}
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            className="btn btn-primary"
+            disabled={isFetchingJobs}
+            onClick={() => triggerManualFetch()}
+            style={{ fontWeight: 600 }}
+          >
+            {isFetchingJobs ? "⚡ Fetching ATS..." : "⚡ Run Batch Fetch (8)"}
+          </button>
+          <button
+            className="btn"
+            onClick={fetchAllFromSupabase}
+            disabled={loading || isFetchingJobs}
+          >
+            Refresh UI
+          </button>
+          {userEmail && (
+            <button className="btn" onClick={handleSignOut}>
+              Sign Out
+            </button>
+          )}
+        </div>
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button className="btn" onClick={fetchAllFromSupabase}>
-          Refresh
-        </button>
-        <button className="btn" onClick={handleSignOut}>
-          Sign Out
-        </button>
-      </div>
+
+      {fetchStatusMessage && (
+        <div
+          style={{
+            fontSize: 13,
+            color: "var(--accent)",
+            background: "var(--surface)",
+            padding: "6px 12px",
+            borderRadius: 4,
+            borderLeft: "3px solid var(--accent)",
+          }}
+        >
+          {fetchStatusMessage}
+        </div>
+      )}
     </div>
   );
 }

@@ -64,6 +64,13 @@ interface DashboardContextType {
   setLocRulesJson: (v: string) => void;
   settingsMsg: string | null;
 
+  // Manual Fetch State
+  isFetchingJobs: boolean;
+  fetchStatusMessage: string | null;
+  triggerManualFetch: (
+    companyId?: number
+  ) => Promise<{ ok: boolean; message: string }>;
+
   // Actions
   fetchAllFromSupabase: () => Promise<void>;
   handleMagicLinkLogin: (e: React.FormEvent) => Promise<void>;
@@ -307,6 +314,71 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const [isFetchingJobs, setIsFetchingJobs] = useState(false);
+  const [fetchStatusMessage, setFetchStatusMessage] = useState<string | null>(null);
+
+  async function triggerManualFetch(
+    companyId?: number
+  ): Promise<{ ok: boolean; message: string }> {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const cronSecret = process.env.NEXT_PUBLIC_CRON_SECRET;
+    if (!supabaseUrl) {
+      const msg = "Supabase URL not configured";
+      setFetchStatusMessage(msg);
+      return { ok: false, message: msg };
+    }
+
+    setIsFetchingJobs(true);
+    setFetchStatusMessage(
+      companyId
+        ? `Fetching company #${companyId}...`
+        : "Triggering batch fetch (8 companies)..."
+    );
+
+    try {
+      const session = supabase
+        ? (await supabase.auth.getSession()).data.session
+        : null;
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (cronSecret) {
+        headers["x-cron-secret"] = cronSecret;
+      }
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/collect`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(companyId ? { company_id: companyId } : {}),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const err = data.error || `Error ${res.status}`;
+        setFetchStatusMessage(`Fetch failed: ${err}`);
+        return { ok: false, message: err };
+      }
+
+      const summary = `Fetch done: ${data.companies_ok || 0} OK, ${
+        data.companies_failed || 0
+      } failed. +${data.jobs_new || 0} new jobs!`;
+      setFetchStatusMessage(summary);
+
+      await fetchAllFromSupabase();
+      setTimeout(() => setFetchStatusMessage(null), 6000);
+      return { ok: true, message: summary };
+    } catch (e) {
+      const err = e instanceof Error ? e.message : String(e);
+      setFetchStatusMessage(`Network error: ${err}`);
+      return { ok: false, message: err };
+    } finally {
+      setIsFetchingJobs(false);
+    }
+  }
+
   const filteredJobs = useMemo(() => {
     const q = search.trim().toLowerCase();
     return jobs.filter((j) => {
@@ -356,6 +428,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     locRulesJson,
     setLocRulesJson,
     settingsMsg,
+    isFetchingJobs,
+    fetchStatusMessage,
+    triggerManualFetch,
     fetchAllFromSupabase,
     handleMagicLinkLogin,
     handleSignOut,

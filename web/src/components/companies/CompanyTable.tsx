@@ -5,7 +5,8 @@ import { useDashboard } from "@/hooks/useDashboard";
 import { AddCompanyForm } from "./AddCompanyForm";
 
 export function CompanyTable() {
-  const { companies, toggleCompanyActive } = useDashboard();
+  const { companies, toggleCompanyActive, triggerManualFetch, isFetchingJobs } =
+    useDashboard();
 
   return (
     <section>
@@ -20,7 +21,8 @@ export function CompanyTable() {
               <th>Last Fetched</th>
               <th>Last Status</th>
               <th>Fails</th>
-              <th>Active</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -67,6 +69,17 @@ export function CompanyTable() {
                     onClick={() => toggleCompanyActive(c)}
                   >
                     {c.active ? "Active" : "Paused"}
+                  </button>
+                </td>
+                <td>
+                  <button
+                    className="btn"
+                    title={`Fetch jobs from ${c.name} immediately`}
+                    disabled={isFetchingJobs}
+                    onClick={() => triggerManualFetch(c.id)}
+                    style={{ whiteSpace: "nowrap" }}
+                  >
+                    ⚡ Fetch Now
                   </button>
                 </td>
               </tr>
