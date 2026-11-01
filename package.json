@@ -1,0 +1,10 @@
+{
+  "name": "remote-radar-root",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "lint": "npm --prefix web run lint"
+  }
+}
