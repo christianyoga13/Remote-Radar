@@ -190,11 +190,33 @@ function parseJobsFromHtml(html: string, targetUrl: string): Job[] {
       const fullUrl = new URL(href, targetUrl).href;
       if (!seenIds.has(fullUrl)) {
         seenIds.add(fullUrl);
+
+        // Infer location from URL, inner text, or domain
+        let inferredLoc = "Direct Career Page";
+        const combined = `${href} ${rawInner} ${targetUrl}`.toLowerCase();
+        if (
+          combined.includes(".id/") ||
+          combined.includes(".co.id") ||
+          combined.includes("indonesia") ||
+          combined.includes("jakarta") ||
+          combined.includes("bali") ||
+          combined.includes("surabaya") ||
+          combined.includes("bandung") ||
+          combined.includes("medan") ||
+          combined.includes("semarang") ||
+          combined.includes("makassar") ||
+          combined.includes("palembang") ||
+          combined.includes("gresik") ||
+          combined.includes("banjarmasin")
+        ) {
+          inferredLoc = "Indonesia";
+        }
+
         jobs.push({
           externalId: fullUrl,
           title: rawInner,
-          location: "Career Page",
-          remote: looksRemote(rawInner, "Career Page"),
+          location: inferredLoc,
+          remote: looksRemote(rawInner, inferredLoc),
           url: fullUrl,
           description: undefined,
         });
