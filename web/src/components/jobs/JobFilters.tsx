@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { LocationClass, JobStatus } from "@/types";
+import { LocationClass, JobStatus, SeniorityLevel } from "@/types";
 import { useDashboard } from "@/hooks/useDashboard";
 
 export function JobFilters() {
@@ -12,6 +12,8 @@ export function JobFilters() {
     setLocFilter,
     statusFilter,
     setStatusFilter,
+    levelFilter,
+    setLevelFilter,
     companyFilter,
     setCompanyFilter,
     minScore,
@@ -38,6 +40,18 @@ export function JobFilters() {
         <option value="unknown">Location: Unknown</option>
         <option value="restricted">Location: Restricted (US/EU Only)</option>
         <option value="all">Location: All</option>
+      </select>
+      <select
+        value={levelFilter}
+        onChange={(e) =>
+          setLevelFilter(e.target.value as SeniorityLevel)
+        }
+      >
+        <option value="all">Level: All</option>
+        <option value="junior">Level: Junior / Entry</option>
+        <option value="mid">Level: Mid / Regular</option>
+        <option value="senior">Level: Senior</option>
+        <option value="lead">Level: Lead / Staff / Principal</option>
       </select>
       <select
         value={statusFilter}

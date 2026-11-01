@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { JobRow, JobStatus } from "@/types";
+import { JobRow, JobStatus, detectJobLevel } from "@/types";
 import { useDashboard } from "@/hooks/useDashboard";
 
 interface JobCardProps {
@@ -11,6 +11,7 @@ interface JobCardProps {
 export function JobCard({ job }: JobCardProps) {
   const { expandedJobId, setExpandedJobId, updateJobStatus } = useDashboard();
   const isExpanded = expandedJobId === job.id;
+  const detectedLevel = detectJobLevel(job.title, job.description);
 
   return (
     <article className="card">
@@ -51,6 +52,12 @@ export function JobCard({ job }: JobCardProps) {
             flexShrink: 0,
           }}
         >
+          <span
+            className={`badge badge-${detectedLevel}`}
+            title={`Seniority level: ${detectedLevel.toUpperCase()}`}
+          >
+            {detectedLevel.toUpperCase()}
+          </span>
           <span
             className={`badge badge-${job.location_class}`}
             title="Location classification from settings.location_rules"

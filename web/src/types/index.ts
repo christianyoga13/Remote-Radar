@@ -1,5 +1,41 @@
 export type LocationClass = "eligible" | "restricted" | "unknown";
 export type JobStatus = "new" | "saved" | "applied" | "ignored";
+export type SeniorityLevel = "all" | "junior" | "mid" | "senior" | "lead";
+
+export function detectJobLevel(
+  title: string,
+  description?: string | null
+): "junior" | "mid" | "senior" | "lead" {
+  const t = title.toLowerCase();
+
+  // 1. High-confidence keywords in title
+  if (/\b(lead|principal|staff|director|head|architect|vp|chief)\b/i.test(t)) {
+    return "lead";
+  }
+  if (/\b(senior|sr\.?|sr)\b/i.test(t)) {
+    return "senior";
+  }
+  if (/\b(junior|jr\.?|jr|entry[- ]?level|intern|internship|associate|graduate|trainee)\b/i.test(t)) {
+    return "junior";
+  }
+
+  // 2. Check early description if title has no explicit level prefix
+  if (description) {
+    const d = description.slice(0, 1000).toLowerCase();
+    if (/\b(junior|entry[- ]?level|internship|trainee)\b/i.test(d)) {
+      return "junior";
+    }
+    if (/\b(staff engineer|principal engineer|team lead|lead engineer|tech lead)\b/i.test(d)) {
+      return "lead";
+    }
+    if (/\b(senior engineer|senior developer|senior software|senior frontend|senior backend)\b/i.test(d)) {
+      return "senior";
+    }
+  }
+
+  // 3. Standard / Mid-level role
+  return "mid";
+}
 export type AtsType =
   | "greenhouse"
   | "lever"

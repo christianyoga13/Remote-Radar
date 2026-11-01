@@ -17,6 +17,8 @@ import {
   LocationRulesSettings,
   ProfileSettings,
   RunRow,
+  SeniorityLevel,
+  detectJobLevel,
 } from "@/types";
 import {
   DEMO_COMPANIES,
@@ -47,6 +49,8 @@ interface DashboardContextType {
   setLocFilter: (v: LocationClass | "all") => void;
   statusFilter: JobStatus | "all";
   setStatusFilter: (v: JobStatus | "all") => void;
+  levelFilter: SeniorityLevel;
+  setLevelFilter: (v: SeniorityLevel) => void;
   companyFilter: string;
   setCompanyFilter: (v: string) => void;
   minScore: number;
@@ -114,6 +118,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // Job filters
   const [locFilter, setLocFilter] = useState<LocationClass | "all">("eligible");
   const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
+  const [levelFilter, setLevelFilter] = useState<SeniorityLevel>("all");
   const [companyFilter, setCompanyFilter] = useState<string>("all");
   const [minScore, setMinScore] = useState<number>(35);
   const [search, setSearch] = useState<string>("");
@@ -484,6 +489,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     return jobs.filter((j) => {
       if (locFilter !== "all" && j.location_class !== locFilter) return false;
       if (statusFilter !== "all" && j.status !== statusFilter) return false;
+      if (levelFilter !== "all") {
+        const detected = detectJobLevel(j.title, j.description);
+        if (detected !== levelFilter) return false;
+      }
       if (companyFilter !== "all" && String(j.company_id) !== companyFilter) {
         return false;
       }
@@ -496,7 +505,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       }
       return true;
     });
-  }, [jobs, locFilter, statusFilter, companyFilter, minScore, search]);
+  }, [jobs, locFilter, statusFilter, levelFilter, companyFilter, minScore, search]);
 
   const value = {
     userEmail,
@@ -514,6 +523,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     setLocFilter,
     statusFilter,
     setStatusFilter,
+    levelFilter,
+    setLevelFilter,
     companyFilter,
     setCompanyFilter,
     minScore,
