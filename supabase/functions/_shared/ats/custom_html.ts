@@ -29,125 +29,25 @@ export const customHtmlAdapter: Adapter = {
       throw new Error(`Response exceeded ${MAX_RESPONSE_BYTES} chars from ${targetUrl}`);
     }
 
-    const jobs: Job[] = [];
-    const seenIds = new Set<string>();
+    let jobs = parseJobsFromHtml(html, targetUrl);
 
-    // Strategy 1: Check Schema.org JSON-LD (application/ld+json)
-    const jsonLdMatches = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
-    for (const match of jsonLdMatches) {
-      try {
-        const parsed = JSON.parse(match[1]);
-        const items = Array.isArray(parsed) ? parsed : [parsed];
-        for (const item of items) {
-          if (item?.["@type"] === "JobPosting") {
-            const externalId = String(item.identifier?.value || item.identifier || item.url || item.title);
-            if (!seenIds.has(externalId)) {
-              seenIds.add(externalId);
-              const title = String(item.title || "Untitled Role");
-              const loc = typeof item.jobLocation === "string"
-                ? item.jobLocation
-                : item.jobLocation?.address?.addressLocality ||
-                  item.jobLocation?.address?.addressCountry ||
-                  (item.applicantLocationRequirements ? "Remote" : "Flexible");
-
-              const url = item.url ? new URL(item.url, targetUrl).href : targetUrl;
-              const isRemote = Boolean(
-                item.jobLocationType === "TELECOMMUTE" ||
-                item.applicantLocationRequirements ||
-                looksRemote(title, loc)
-              );
-
-              jobs.push({
-                externalId,
-                title,
-                location: loc,
-                remote: isRemote,
-                url,
-                description: truncateDescription(item.description),
-                postedAt: item.datePosted ? new Date(item.datePosted).toISOString() : undefined,
-              });
+    // If root page yielded no direct jobs, try discovering a search/all-jobs page
+    if (jobs.length === 0) {
+      const searchLinkMatch = html.match(
+        /<a[^>]+href=["']([^"']*(?:\/search\/|\/search\?|\/all-jobs|\/go\/[Aa]ll-[Jj]obs|\/openings|\/vacancies)[^"']*)["']/i
+      );
+      if (searchLinkMatch) {
+        try {
+          const searchUrl = new URL(searchLinkMatch[1], targetUrl).href;
+          const searchRes = await fetch(searchUrl, { headers, signal });
+          if (searchRes.ok) {
+            const searchHtml = await searchRes.text();
+            if (searchHtml.length <= MAX_RESPONSE_BYTES) {
+              jobs = parseJobsFromHtml(searchHtml, searchUrl);
             }
           }
-        }
-      } catch {
-        // Continue to next match
-      }
-    }
-
-    if (jobs.length > 0) {
-      return jobs;
-    }
-
-    // Strategy 2: Check Next.js / Nuxt embedded state (__NEXT_DATA__)
-    const nextDataMatch = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
-    if (nextDataMatch) {
-      try {
-        const nextData = JSON.parse(nextDataMatch[1]);
-        const candidateLists = findJobArraysInObject(nextData);
-        for (const list of candidateLists) {
-          for (const item of list) {
-            const title = item.title || item.name || item.jobTitle || item.position;
-            if (title && typeof title === "string" && title.length < 120) {
-              const id = String(item.id || item.slug || item.jobId || title);
-              if (!seenIds.has(id)) {
-                seenIds.add(id);
-                const loc = String(item.location || item.city || item.country || "Remote");
-                const url = item.url || item.applyUrl || item.link || targetUrl;
-                jobs.push({
-                  externalId: id,
-                  title: title.trim(),
-                  location: loc,
-                  remote: looksRemote(title, loc, item.isRemote || item.remote),
-                  url: new URL(url, targetUrl).href,
-                  description: truncateDescription(item.description || item.summary),
-                  postedAt: item.postedAt || item.createdAt || undefined,
-                });
-              }
-            }
-          }
-        }
-      } catch {
-        // Fallback to HTML link heuristics
-      }
-    }
-
-    if (jobs.length > 0) {
-      return jobs;
-    }
-
-    // Strategy 3: Heuristic HTML Link Extraction (matches links like /job/, /career/, /position/, /vacancy/)
-    const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
-    for (const match of html.matchAll(linkRegex)) {
-      const href = match[1];
-      const rawInner = match[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-
-      // Check if href indicates a job post and has reasonable title text length
-      const isJobLink = /\/(job|careers?|positions?|vacanc(y|ies)|openings?)\/[a-z0-9_-]+/i.test(href) ||
-        /\b(jobId|positionId)=[0-9]+/i.test(href);
-
-      if (isJobLink && rawInner.length > 4 && rawInner.length < 100) {
-        // Avoid utility navigation links like "View all jobs", "Careers", etc.
-        const lower = rawInner.toLowerCase();
-        if (
-          lower === "apply now" ||
-          lower === "view details" ||
-          lower.includes("all jobs") ||
-          lower.includes("privacy policy")
-        ) {
-          continue;
-        }
-
-        const fullUrl = new URL(href, targetUrl).href;
-        if (!seenIds.has(fullUrl)) {
-          seenIds.add(fullUrl);
-          jobs.push({
-            externalId: fullUrl,
-            title: rawInner,
-            location: "Career Page",
-            remote: looksRemote(rawInner, "Career Page"),
-            url: fullUrl,
-            description: undefined,
-          });
+        } catch {
+          // If search subpage fails, return whatever we had
         }
       }
     }
@@ -155,6 +55,155 @@ export const customHtmlAdapter: Adapter = {
     return jobs;
   },
 };
+
+/**
+ * Extracts jobs from an HTML page using JSON-LD, embedded SPA state, or link heuristics
+ */
+function parseJobsFromHtml(html: string, targetUrl: string): Job[] {
+  const jobs: Job[] = [];
+  const seenIds = new Set<string>();
+
+  // Strategy 1: Check Schema.org JSON-LD (application/ld+json)
+  const jsonLdMatches = html.matchAll(
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  );
+  for (const match of jsonLdMatches) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      for (const item of items) {
+        if (item?.["@type"] === "JobPosting") {
+          const externalId = String(
+            item.identifier?.value || item.identifier || item.url || item.title
+          );
+          if (!seenIds.has(externalId)) {
+            seenIds.add(externalId);
+            const title = String(item.title || "Untitled Role");
+            const loc = typeof item.jobLocation === "string"
+              ? item.jobLocation
+              : item.jobLocation?.address?.addressLocality ||
+                item.jobLocation?.address?.addressCountry ||
+                (item.applicantLocationRequirements ? "Remote" : "Flexible");
+
+            const url = item.url ? new URL(item.url, targetUrl).href : targetUrl;
+            const isRemote = Boolean(
+              item.jobLocationType === "TELECOMMUTE" ||
+                item.applicantLocationRequirements ||
+                looksRemote(title, loc)
+            );
+
+            jobs.push({
+              externalId,
+              title,
+              location: loc,
+              remote: isRemote,
+              url,
+              description: truncateDescription(item.description),
+              postedAt: item.datePosted
+                ? new Date(item.datePosted).toISOString()
+                : undefined,
+            });
+          }
+        }
+      }
+    } catch {
+      // Continue to next match
+    }
+  }
+
+  if (jobs.length > 0) {
+    return jobs;
+  }
+
+  // Strategy 2: Check Next.js / Nuxt embedded state (__NEXT_DATA__)
+  const nextDataMatch = html.match(
+    /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i
+  );
+  if (nextDataMatch) {
+    try {
+      const nextData = JSON.parse(nextDataMatch[1]);
+      const candidateLists = findJobArraysInObject(nextData);
+      for (const list of candidateLists) {
+        for (const item of list) {
+          const title = item.title || item.name || item.jobTitle || item.position;
+          if (title && typeof title === "string" && title.length < 120) {
+            const id = String(item.id || item.slug || item.jobId || title);
+            if (!seenIds.has(id)) {
+              seenIds.add(id);
+              const loc = String(
+                item.location || item.city || item.country || "Remote"
+              );
+              const url = item.url || item.applyUrl || item.link || targetUrl;
+              jobs.push({
+                externalId: id,
+                title: title.trim(),
+                location: loc,
+                remote: looksRemote(title, loc, item.isRemote || item.remote),
+                url: new URL(url, targetUrl).href,
+                description: truncateDescription(
+                  item.description || item.summary
+                ),
+                postedAt: item.postedAt || item.createdAt || undefined,
+              });
+            }
+          }
+        }
+      }
+    } catch {
+      // Fallback to HTML link heuristics
+    }
+  }
+
+  if (jobs.length > 0) {
+    return jobs;
+  }
+
+  // Strategy 3: Heuristic HTML Link Extraction (matches links like /job/, /career/, /position/, /vacancy/)
+  const linkRegex = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  for (const match of html.matchAll(linkRegex)) {
+    const href = match[1];
+    const rawInner = match[2]
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Check if href indicates a job post and has reasonable title text length
+    const isJobLink =
+      /\/(job|jobs|careers?|positions?|vacanc(?:y|ies)|openings?)\/[^/\"'\s<>]+/i.test(
+        href
+      ) || /\b(?:jobId|positionId)=[0-9]+/i.test(href);
+
+    if (isJobLink && rawInner.length > 4 && rawInner.length < 120) {
+      // Avoid utility navigation links like "View all jobs", "Careers", etc.
+      const lower = rawInner.toLowerCase();
+      if (
+        lower === "apply now" ||
+        lower === "view details" ||
+        lower.includes("all jobs") ||
+        lower.includes("privacy policy") ||
+        lower.includes("cookie") ||
+        lower.includes("terms of use")
+      ) {
+        continue;
+      }
+
+      const fullUrl = new URL(href, targetUrl).href;
+      if (!seenIds.has(fullUrl)) {
+        seenIds.add(fullUrl);
+        jobs.push({
+          externalId: fullUrl,
+          title: rawInner,
+          location: "Career Page",
+          remote: looksRemote(rawInner, "Career Page"),
+          url: fullUrl,
+          description: undefined,
+        });
+      }
+    }
+  }
+
+  return jobs;
+}
 
 /**
  * Recursively scans an object for arrays of job-like objects

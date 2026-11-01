@@ -94,7 +94,7 @@ interface DashboardContextType {
     ats: AtsType,
     slug: string,
     careersUrl?: string
-  ) => Promise<void>;
+  ) => Promise<{ ok: boolean; message?: string }>;
   toggleCompanyActive: (comp: Company) => Promise<void>;
   handleSaveSettings: () => Promise<void>;
 }
@@ -223,7 +223,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     setJobs((prev) =>
       prev.map((j) => (j.id === jobId ? { ...j, status } : j))
     );
-    if (supabase && userEmail) {
+    if (supabase) {
       await supabase.from("jobs").update({ status }).eq("id", jobId);
     }
   }
@@ -233,10 +233,12 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     ats: AtsType,
     slug: string,
     careersUrl?: string
-  ) {
+  ): Promise<{ ok: boolean; message?: string }> {
     const trimmedName = name.trim();
     const trimmedSlug = slug.trim().toLowerCase();
-    if (!trimmedName || !trimmedSlug) return;
+    if (!trimmedName || !trimmedSlug) {
+      return { ok: false, message: "Nama perusahaan dan slug/URL wajib diisi." };
+    }
 
     const defaultUrl =
       careersUrl?.trim() ||
@@ -244,9 +246,11 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         ? `https://boards.greenhouse.io/${trimmedSlug}`
         : ats === "lever"
         ? `https://jobs.lever.co/${trimmedSlug}`
+        : ats === "custom_html"
+        ? (trimmedSlug.startsWith("http") ? trimmedSlug : `https://${trimmedSlug}`)
         : `https://jobs.ashbyhq.com/${trimmedSlug}`);
 
-    if (supabase && userEmail) {
+    if (supabase) {
       const { data, error } = await supabase
         .from("companies")
         .insert({
@@ -259,24 +263,44 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         .select("*")
         .single();
       if (!error && data) {
-        setCompanies((prev) => [...prev, data as Company]);
+        setCompanies((prev) =>
+          [...prev, data as Company].sort((a, b) =>
+            a.name.localeCompare(b.name)
+          )
+        );
+        return {
+          ok: true,
+          message: `Berhasil menambahkan "${trimmedName}" ke database.`,
+        };
+      } else if (error) {
+        console.error("Error adding company to Supabase:", error);
+        let userMsg = error.message;
+        if (error.code === "23505" || error.message.includes("unique")) {
+          userMsg = `Perusahaan dengan ATS "${ats}" dan slug "${trimmedSlug}" sudah terdaftar.`;
+        }
+        return { ok: false, message: userMsg };
       }
     } else {
-      setCompanies((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          name: trimmedName,
-          ats,
-          slug: trimmedSlug,
-          careers_url: defaultUrl,
-          active: true,
-          fail_count: 0,
-          last_status: "pending first batch",
-          last_fetched_at: null,
-        },
-      ]);
+      const newLocalCompany: Company = {
+        id: Date.now(),
+        name: trimmedName,
+        ats,
+        slug: trimmedSlug,
+        careers_url: defaultUrl,
+        active: true,
+        fail_count: 0,
+        last_status: "pending first batch",
+        last_fetched_at: null,
+      };
+      setCompanies((prev) =>
+        [...prev, newLocalCompany].sort((a, b) => a.name.localeCompare(b.name))
+      );
+      return {
+        ok: true,
+        message: `(Mode Offline) Berhasil menambahkan "${trimmedName}".`,
+      };
     }
+    return { ok: false, message: "Terjadi kesalahan tidak dikenal." };
   }
 
   async function toggleCompanyActive(comp: Company) {
@@ -288,7 +312,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
           : c
       )
     );
-    if (supabase && userEmail) {
+    if (supabase) {
       await supabase
         .from("companies")
         .update({

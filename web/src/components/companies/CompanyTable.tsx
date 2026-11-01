@@ -49,9 +49,13 @@ export function CompanyTable() {
                   </code>
                 </td>
                 <td>
-                  {c.last_fetched_at
-                    ? new Date(c.last_fetched_at).toLocaleString()
-                    : "Never"}
+                  {c.last_fetched_at ? (
+                    new Date(c.last_fetched_at).toLocaleString()
+                  ) : (
+                    <span style={{ color: "var(--muted)", fontStyle: "italic", fontSize: 12 }}>
+                      Belum pernah
+                    </span>
+                  )}
                 </td>
                 <td
                   style={{
@@ -73,7 +77,7 @@ export function CompanyTable() {
                 </td>
                 <td>
                   <button
-                    className="btn"
+                    className={`btn ${!c.last_fetched_at ? "btn-primary" : ""}`}
                     title={`Fetch jobs from ${c.name} immediately`}
                     disabled={isFetchingJobs}
                     onClick={() => triggerManualFetch(c.id)}
