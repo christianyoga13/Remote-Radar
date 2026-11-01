@@ -36,6 +36,8 @@ export function AddCompanyForm() {
         <option value="ashby">Ashby</option>
         <option value="greenhouse">Greenhouse</option>
         <option value="lever">Lever</option>
+        <option value="remotive">Remotive (Public Feed)</option>
+        <option value="arbeitnow">Arbeitnow (Public Feed)</option>
       </select>
       <input
         type="text"

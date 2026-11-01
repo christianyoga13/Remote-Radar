@@ -1,4 +1,4 @@
-export type AtsName = "greenhouse" | "lever" | "ashby";
+export type AtsName = "greenhouse" | "lever" | "ashby" | "remotive" | "arbeitnow";
 
 export type LocationClass = "eligible" | "restricted" | "unknown";
 
@@ -50,8 +50,8 @@ export interface CompanyRow {
 }
 
 export const MAX_DESCRIPTION_CHARS = 4000;
-export const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
-export const DEFAULT_USER_AGENT = "RemoteRadar/0.1 (+https://github.com/christian/remote-radar)";
+export const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
+export const DEFAULT_USER_AGENT = "RemoteRadar/0.1 (+https://github.com/christianyoga13/Remote-Radar)";
 
 export function truncateDescription(text?: string | null): string | undefined {
   if (!text) return undefined;

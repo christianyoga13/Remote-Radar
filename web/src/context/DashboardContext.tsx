@@ -122,12 +122,12 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
 
+    // Fetch live data immediately for public / anon viewing
+    fetchAllFromSupabase();
+
     supabase.auth.getSession().then(({ data }) => {
       const email = data.session?.user?.email ?? null;
       setUserEmail(email);
-      if (email) {
-        fetchAllFromSupabase();
-      }
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {

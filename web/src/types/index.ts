@@ -6,7 +6,9 @@ export type AtsType =
   | "ashby"
   | "workable"
   | "smartrecruiters"
-  | "recruitee";
+  | "recruitee"
+  | "remotive"
+  | "arbeitnow";
 
 export interface Company {
   id: number;
