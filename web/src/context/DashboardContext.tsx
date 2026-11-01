@@ -71,6 +71,15 @@ interface DashboardContextType {
     companyId?: number
   ) => Promise<{ ok: boolean; message: string }>;
 
+  // CV Profiler & Rescoring
+  isRescoring: boolean;
+  applyCvProfileAndRescore: (
+    newSkills: { roles: string[]; stack: string[]; levels: string[] },
+    mode: "merge" | "replace",
+    triggerRescore: boolean
+  ) => Promise<{ ok: boolean; message: string }>;
+  rescoreAllJobs: () => Promise<{ ok: boolean; message: string }>;
+
   // Actions
   fetchAllFromSupabase: () => Promise<void>;
   handleMagicLinkLogin: (e: React.FormEvent) => Promise<void>;
@@ -285,6 +294,93 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const [isRescoring, setIsRescoring] = useState(false);
+
+  async function rescoreAllJobs(): Promise<{ ok: boolean; message: string }> {
+    if (!supabase) return { ok: false, message: "Supabase not connected" };
+    setIsRescoring(true);
+    try {
+      const { data, error } = await supabase.rpc("rescore_jobs");
+      if (error) throw error;
+      await fetchAllFromSupabase();
+      const count = (data as { rescored_jobs?: number })?.rescored_jobs ?? 0;
+      const msg = `Successfully rescored ${count} jobs with updated profile!`;
+      setSettingsMsg(msg);
+      return { ok: true, message: msg };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSettingsMsg(`Rescore error: ${msg}`);
+      return { ok: false, message: msg };
+    } finally {
+      setIsRescoring(false);
+    }
+  }
+
+  async function applyCvProfileAndRescore(
+    newSkills: { roles: string[]; stack: string[]; levels: string[] },
+    mode: "merge" | "replace",
+    triggerRescore: boolean
+  ): Promise<{ ok: boolean; message: string }> {
+    setIsRescoring(true);
+    try {
+      const current = profile;
+      let finalRoles: string[];
+      let finalStack: string[];
+      let finalLevels: string[];
+
+      if (mode === "merge") {
+        finalRoles = Array.from(new Set([...current.roles, ...newSkills.roles]));
+        finalStack = Array.from(new Set([...current.stack, ...newSkills.stack]));
+        finalLevels = Array.from(new Set([...current.levels, ...newSkills.levels]));
+      } else {
+        finalRoles = newSkills.roles.length > 0 ? newSkills.roles : current.roles;
+        finalStack = newSkills.stack.length > 0 ? newSkills.stack : current.stack;
+        finalLevels = newSkills.levels.length > 0 ? newSkills.levels : current.levels;
+      }
+
+      const updatedProfile: ProfileSettings = {
+        ...current,
+        roles: finalRoles,
+        stack: finalStack,
+        levels: finalLevels,
+      };
+
+      setProfile(updatedProfile);
+      setProfileJson(JSON.stringify(updatedProfile, null, 2));
+
+      if (supabase) {
+        const { error } = await supabase.rpc("update_profile_and_rescore", {
+          p_profile: updatedProfile,
+          p_trigger_rescore: triggerRescore,
+        });
+        if (error) {
+          console.warn("RPC update_profile_and_rescore error, fallback:", error);
+          await supabase.from("settings").upsert({
+            key: "profile",
+            value: updatedProfile,
+            updated_at: new Date().toISOString(),
+          });
+          if (triggerRescore) {
+            await supabase.rpc("rescore_jobs");
+          }
+        }
+        await fetchAllFromSupabase();
+      }
+
+      const msg = triggerRescore
+        ? `CV applied! ${finalRoles.length} roles & ${finalStack.length} skills saved, and all jobs rescored.`
+        : `CV profile saved! Updated ${finalRoles.length} roles and ${finalStack.length} skills.`;
+      setSettingsMsg(msg);
+      return { ok: true, message: msg };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSettingsMsg(`Error applying CV: ${msg}`);
+      return { ok: false, message: msg };
+    } finally {
+      setIsRescoring(false);
+    }
+  }
+
   async function handleSaveSettings() {
     setSettingsMsg(null);
     try {
@@ -293,19 +389,23 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       setProfile(parsedProfile);
       setLocationRules(parsedRules);
 
-      if (supabase && userEmail) {
-        const now = new Date().toISOString();
-        const { error } = await supabase.from("settings").upsert([
-          { key: "profile", value: parsedProfile, updated_at: now },
-          { key: "location_rules", value: parsedRules, updated_at: now },
-        ]);
+      if (supabase) {
+        // Use RPC to update and optionally rescore
+        const { error } = await supabase.rpc("update_profile_and_rescore", {
+          p_profile: parsedProfile,
+          p_trigger_rescore: true,
+        });
         if (error) {
-          setSettingsMsg(`Error saving to Supabase: ${error.message}`);
-          return;
+          // Fallback if direct table update needed
+          await supabase.from("settings").upsert([
+            { key: "profile", value: parsedProfile, updated_at: new Date().toISOString() },
+            { key: "location_rules", value: parsedRules, updated_at: new Date().toISOString() },
+          ]);
         }
+        await fetchAllFromSupabase();
       }
       setSettingsMsg(
-        "Settings saved! Next collect batch will use updated rules."
+        "Settings saved! Vacancies rescored and next collect batch will use updated rules."
       );
     } catch (err) {
       setSettingsMsg(
@@ -438,6 +538,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     handleAddCompany,
     toggleCompanyActive,
     handleSaveSettings,
+    isRescoring,
+    applyCvProfileAndRescore,
+    rescoreAllJobs,
   };
 
   return (
