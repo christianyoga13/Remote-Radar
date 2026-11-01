@@ -1,0 +1,28 @@
+{
+  "jobs": [
+    {
+      "id": 4019283,
+      "title": "Senior Fullstack Engineer (React / Go)",
+      "updated_at": "2026-10-30T12:00:00Z",
+      "location": {
+        "name": "Remote - Worldwide (APAC / EMEA)"
+      },
+      "absolute_url": "https://boards.greenhouse.io/example/jobs/4019283",
+      "departments": [
+        { "name": "Engineering" }
+      ]
+    },
+    {
+      "id": 4019284,
+      "title": "Staff Backend Engineer",
+      "updated_at": "2026-10-30T14:00:00Z",
+      "location": {
+        "name": "Remote - US Only"
+      },
+      "absolute_url": "https://boards.greenhouse.io/example/jobs/4019284",
+      "departments": [
+        { "name": "Infrastructure" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "b7a1f3e0-1234-4567-89ab-cdef01234567",
+    "text": "Frontend Engineer (Next.js / TypeScript)",
+    "createdAt": 1761825600000,
+    "hostedUrl": "https://jobs.lever.co/example/b7a1f3e0-1234-4567-89ab-cdef01234567",
+    "workplaceType": "remote",
+    "categories": {
+      "location": "Anywhere - Global",
+      "team": "Product Engineering"
+    },
+    "descriptionPlain": "We build with TypeScript, React, Next.js, and Postgres. Open worldwide including Indonesia."
+  },
+  {
+    "id": "c8b2f4e1-1234-4567-89ab-cdef01234568",
+    "text": "Office Operations Coordinator",
+    "createdAt": 1761825600000,
+    "hostedUrl": "https://jobs.lever.co/example/c8b2f4e1-1234-4567-89ab-cdef01234568",
+    "workplaceType": "onsite",
+    "categories": {
+      "location": "London, UK",
+      "team": "Operations"
+    },
+    "descriptionPlain": "Must reside in London."
+  }
+]

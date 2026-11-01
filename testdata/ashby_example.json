@@ -1,0 +1,24 @@
+{
+  "jobs": [
+    {
+      "id": "ashby-job-001",
+      "title": "Product Engineer (Fullstack TypeScript)",
+      "department": "Engineering",
+      "location": "Remote (Anywhere)",
+      "isRemote": true,
+      "publishedAt": "2026-10-29T09:30:00.000Z",
+      "jobUrl": "https://jobs.ashbyhq.com/example/ashby-job-001",
+      "descriptionPlain": "Work from anywhere on our Next.js, React, Go, and PostgreSQL stack."
+    },
+    {
+      "id": "ashby-job-002",
+      "title": "Backend Engineer",
+      "department": "Engineering",
+      "location": "Berlin, Germany",
+      "isRemote": true,
+      "publishedAt": "2026-10-29T10:30:00.000Z",
+      "jobUrl": "https://jobs.ashbyhq.com/example/ashby-job-002",
+      "descriptionPlain": "EU; Berlin Office, no visa support."
+    }
+  ]
+}
