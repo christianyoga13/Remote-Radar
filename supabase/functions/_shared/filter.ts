@@ -61,12 +61,87 @@ export function classifyLocation(
 }
 
 /**
+ * Detects timezone requirements and asynchronous work culture from title and description.
+ * Uses lowercase substring matching without backtracking regexes to respect Edge Function CPU limits.
+ */
+export function detectTimezoneAndAsync(
+  job: Pick<Job, "title" | "location" | "description">,
+): { timezoneNote?: string; isAsync: boolean } {
+  const text = `${job.title} ${job.location} ${(truncateDescription(job.description) || "")}`.toLowerCase();
+
+  const asyncKeywords = [
+    "asynchronous",
+    "async-first",
+    "async first",
+    "any timezone",
+    "flexible working hours",
+    "flexible hours",
+    "work anytime",
+    "work from anywhere in the world",
+    "fully async",
+  ];
+  const isAsync = containsAny(text, asyncKeywords);
+
+  const usOverlapKeywords = [
+    "overlap with est",
+    "overlap with pst",
+    "overlap with et",
+    "overlap with pt",
+    "us working hours",
+    "us business hours",
+    "est hours",
+    "pst hours",
+    "eastern time",
+    "pacific time",
+    "americas timezone",
+  ];
+
+  const euOverlapKeywords = [
+    "overlap with bst",
+    "overlap with cet",
+    "european hours",
+    "uk business hours",
+    "cet hours",
+    "european timezone",
+  ];
+
+  const apacKeywords = [
+    "apac",
+    "asia-pacific",
+    "asia pacific",
+    "singapore hours",
+    "australia hours",
+    "aest",
+    "wib",
+    "gmt+7",
+    "utc+7",
+    "utc+8",
+  ];
+
+  let timezoneNote: string | undefined;
+
+  if (containsAny(text, apacKeywords)) {
+    timezoneNote = "🌏 APAC Friendly";
+  } else if (containsAny(text, usOverlapKeywords)) {
+    timezoneNote = "Requires US Overlap";
+  } else if (containsAny(text, euOverlapKeywords)) {
+    timezoneNote = "Requires EU Overlap";
+  } else if (isAsync) {
+    timezoneNote = "⚡ Async-first / Flexible Hours";
+  }
+
+  return { timezoneNote, isAsync };
+}
+
+/**
  * Computes a 0-100 match score from role match, tech stack hits, seniority level, and blacklist penalties.
+ * Also grants bonus points for async-friendly work and companies verified as worldwide/APAC in remoteintech.
  */
 export function computeMatchScore(
   job: Pick<Job, "title" | "location" | "description" | "remote">,
   profile: ProfileSettings,
   locationClass: LocationClass,
+  options?: { isAsync?: boolean; companyRegion?: string | null },
 ): number {
   if (!job.remote || locationClass === "restricted") return 0;
 
@@ -105,6 +180,19 @@ export function computeMatchScore(
   // Location bonus (9 pts for explicit eligible vs unknown)
   if (locationClass === "eligible") {
     score += 9;
+  }
+
+  // Async / Flexible timezone bonus (+5 pts)
+  if (options?.isAsync) {
+    score += 5;
+  }
+
+  // Remoteintech verified worldwide/APAC company bonus (+5 pts)
+  if (
+    options?.companyRegion === "worldwide" ||
+    options?.companyRegion === "asia-pacific"
+  ) {
+    score += 5;
   }
 
   return Math.max(0, Math.min(100, score));

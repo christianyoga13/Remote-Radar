@@ -57,6 +57,9 @@ export interface Company {
   fail_count: number;
   last_status: string | null;
   last_fetched_at: string | null;
+  region?: string | null;
+  remote_policy?: string | null;
+  source?: string | null;
 }
 
 export interface JobRow {
@@ -77,10 +80,14 @@ export interface JobRow {
   match_score: number | null;
   notified_at: string | null;
   status: JobStatus;
+  timezone_note?: string | null;
+  is_async?: boolean;
   companies?: {
     name: string;
     ats: AtsType;
     slug: string;
+    region?: string | null;
+    remote_policy?: string | null;
   };
 }
 

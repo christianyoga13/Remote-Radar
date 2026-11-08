@@ -6,6 +6,10 @@ export interface NotifiableJob {
   location_class: string;
   match_score: number | null;
   url: string;
+  timezone_note?: string | null;
+  is_async?: boolean | null;
+  company_region?: string | null;
+  company_remote_policy?: string | null;
 }
 
 function escapeHtml(text: string): string {
@@ -25,9 +29,11 @@ export function formatTelegramDigest(
     const badge = j.location_class === "eligible" ? "[ELIGIBLE]" : "[UNKNOWN]";
     const loc = j.location_raw ? escapeHtml(j.location_raw) : "Remote";
     const score = j.match_score ?? 0;
-    return `${startIndex + idx}. <b>${escapeHtml(j.company_name)}</b> — <a href="${escapeHtml(j.url)}">${
+    const tz = j.timezone_note ? ` · ${escapeHtml(j.timezone_note)}` : "";
+    const reg = j.company_region ? ` [${escapeHtml(j.company_region)}]` : "";
+    return `${startIndex + idx}. <b>${escapeHtml(j.company_name)}</b>${reg} — <a href="${escapeHtml(j.url)}">${
       escapeHtml(j.title)
-    }</a>\n   ${badge} ${loc} · Score: <b>${score}</b>`;
+    }</a>\n   ${badge}${tz} ${loc} · Score: <b>${score}</b>`;
   });
   return `${header}\n${lines.join("\n\n")}`;
 }

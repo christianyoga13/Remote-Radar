@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useDashboard } from "@/hooks/useDashboard";
+import { TelemetryStatCards } from "./TelemetryStatCards";
 import { JobFilters } from "./JobFilters";
 import { JobCard } from "./JobCard";
 
@@ -27,6 +28,10 @@ export function JobList() {
 
   return (
     <section>
+      {/* 4 Telemetry Stat KPI Cards (DESIGN.md Section 4.3) */}
+      <TelemetryStatCards />
+
+      {/* Primary Toolbar & Filters */}
       <JobFilters />
 
       {filteredJobs.length === 0 ? (

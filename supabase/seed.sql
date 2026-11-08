@@ -52,13 +52,26 @@ insert into settings (key, value) values
 )
 on conflict (key) do update set value = excluded.value, updated_at = now();
 
-insert into companies (name, ats, slug, careers_url, active) values
-  ('GitLab', 'greenhouse', 'gitlab', 'https://boards.greenhouse.io/gitlab', true),
-  ('Grafana Labs', 'greenhouse', 'grafanalabs', 'https://boards.greenhouse.io/grafanalabs', true),
-  ('Canonical', 'greenhouse', 'canonical', 'https://boards.greenhouse.io/canonical', true),
-  ('Sourcegraph', 'greenhouse', 'sourcegraph91', 'https://boards.greenhouse.io/sourcegraph91', true),
-  ('Supabase', 'ashby', 'supabase', 'https://jobs.ashbyhq.com/supabase', true),
-  ('Linear', 'ashby', 'linear', 'https://jobs.ashbyhq.com/linear', true),
-  ('PostHog', 'ashby', 'posthog', 'https://jobs.ashbyhq.com/posthog', true),
-  ('Cal.com', 'ashby', 'cal', 'https://jobs.ashbyhq.com/cal', true)
-on conflict (ats, slug) do nothing;
+insert into companies (name, ats, slug, careers_url, active, region, remote_policy, source) values
+  ('Automattic', 'greenhouse', 'automattic', 'https://boards.greenhouse.io/automattic', true, 'worldwide', 'fully-remote', 'remoteintech'),
+  ('GitLab', 'greenhouse', 'gitlab', 'https://boards.greenhouse.io/gitlab', true, 'worldwide', 'fully-remote', 'remoteintech'),
+  ('Buffer', 'ashby', 'buffer', 'https://jobs.ashbyhq.com/buffer', true, 'worldwide', 'fully-remote', 'remoteintech'),
+  ('DuckDuckGo', 'greenhouse', 'duckduckgo', 'https://boards.greenhouse.io/duckduckgo', true, 'worldwide', 'fully-remote', 'remoteintech'),
+  ('Grafana Labs', 'greenhouse', 'grafanalabs', 'https://boards.greenhouse.io/grafanalabs', true, 'worldwide', 'remote-first', 'remoteintech'),
+  ('Canonical', 'greenhouse', 'canonical', 'https://boards.greenhouse.io/canonical', true, 'worldwide', 'remote-first', 'remoteintech'),
+  ('Sourcegraph', 'greenhouse', 'sourcegraph91', 'https://boards.greenhouse.io/sourcegraph91', true, 'worldwide', 'remote-first', 'remoteintech'),
+  ('Supabase', 'ashby', 'supabase', 'https://jobs.ashbyhq.com/supabase', true, 'worldwide', 'remote-first', 'manual'),
+  ('Linear', 'ashby', 'linear', 'https://jobs.ashbyhq.com/linear', true, 'worldwide', 'remote-first', 'manual'),
+  ('PostHog', 'ashby', 'posthog', 'https://jobs.ashbyhq.com/posthog', true, 'worldwide', 'fully-remote', 'remoteintech'),
+  ('Cal.com', 'ashby', 'cal', 'https://jobs.ashbyhq.com/cal', true, 'worldwide', 'fully-remote', 'remoteintech'),
+  ('Ghost', 'greenhouse', 'ghost', 'https://boards.greenhouse.io/ghost', true, 'worldwide', 'fully-remote', 'remoteintech'),
+  ('10up', 'greenhouse', '10up', 'https://boards.greenhouse.io/10up', true, 'worldwide', 'fully-remote', 'remoteintech'),
+  ('Hotjar', 'greenhouse', 'hotjar', 'https://boards.greenhouse.io/hotjar', true, 'worldwide', 'fully-remote', 'remoteintech'),
+  ('Zapier', 'greenhouse', 'zapier', 'https://boards.greenhouse.io/zapier', true, 'worldwide', 'fully-remote', 'remoteintech'),
+  ('Kinsta', 'lever', 'kinsta', 'https://jobs.lever.co/kinsta', true, 'worldwide', 'remote-first', 'remoteintech'),
+  ('Synthesia', 'ashby', 'synthesia', 'https://jobs.ashbyhq.com/synthesia', true, 'worldwide', 'remote-first', 'remoteintech'),
+  ('Doppler', 'ashby', 'doppler', 'https://jobs.ashbyhq.com/doppler', true, 'worldwide', 'remote-first', 'remoteintech')
+on conflict (ats, slug) do update set
+  region = excluded.region,
+  remote_policy = excluded.remote_policy,
+  source = excluded.source;

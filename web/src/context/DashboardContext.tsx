@@ -70,10 +70,12 @@ interface DashboardContextType {
 
   // Manual Fetch State
   isFetchingJobs: boolean;
+  isSyncingRemoteInTech: boolean;
   fetchStatusMessage: string | null;
   triggerManualFetch: (
     companyId?: number
   ) => Promise<{ ok: boolean; message: string }>;
+  triggerSyncRemoteInTech: () => Promise<{ ok: boolean; message: string }>;
 
   // CV Profiler & Rescoring
   isRescoring: boolean;
@@ -444,7 +446,62 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   }
 
   const [isFetchingJobs, setIsFetchingJobs] = useState(false);
+  const [isSyncingRemoteInTech, setIsSyncingRemoteInTech] = useState(false);
   const [fetchStatusMessage, setFetchStatusMessage] = useState<string | null>(null);
+
+  async function triggerSyncRemoteInTech(): Promise<{ ok: boolean; message: string }> {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const cronSecret = process.env.NEXT_PUBLIC_CRON_SECRET;
+    if (!supabaseUrl) {
+      const msg = "Supabase URL not configured";
+      setFetchStatusMessage(msg);
+      return { ok: false, message: msg };
+    }
+
+    setIsSyncingRemoteInTech(true);
+    setFetchStatusMessage("Syncing worldwide remote companies from remoteintech GitHub...");
+
+    try {
+      const session = supabase
+        ? (await supabase.auth.getSession()).data.session
+        : null;
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (cronSecret) {
+        headers["x-cron-secret"] = cronSecret;
+      }
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/discover`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ source: "remoteintech" }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const err = data.error || `Error ${res.status}`;
+        setFetchStatusMessage(`Sync failed: ${err}`);
+        return { ok: false, message: err };
+      }
+
+      const summary = `remoteintech sync done: +${data.discovered_count || 0} companies found and queued!`;
+      setFetchStatusMessage(summary);
+
+      await fetchAllFromSupabase();
+      setTimeout(() => setFetchStatusMessage(null), 6000);
+      return { ok: true, message: summary };
+    } catch (e) {
+      const err = e instanceof Error ? e.message : String(e);
+      setFetchStatusMessage(`Sync network error: ${err}`);
+      return { ok: false, message: err };
+    } finally {
+      setIsSyncingRemoteInTech(false);
+    }
+  }
 
   async function triggerManualFetch(
     companyId?: number
@@ -564,8 +621,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     setLocRulesJson,
     settingsMsg,
     isFetchingJobs,
+    isSyncingRemoteInTech,
     fetchStatusMessage,
     triggerManualFetch,
+    triggerSyncRemoteInTech,
     fetchAllFromSupabase,
     handleMagicLinkLogin,
     handleSignOut,

@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { classifyLocation, computeMatchScore } from "./filter.ts";
+import { classifyLocation, computeMatchScore, detectTimezoneAndAsync } from "./filter.ts";
 import { LocationRulesSettings, ProfileSettings } from "./types.ts";
 
 const rules: LocationRulesSettings = {
@@ -97,4 +97,56 @@ Deno.test("computeMatchScore rewards role + stack and zeroes restricted or black
     "restricted",
   );
   assertEquals(restrictedScore, 0);
+});
+
+Deno.test("detectTimezoneAndAsync correctly identifies async and timezone restrictions", () => {
+  const asyncJob = detectTimezoneAndAsync({
+    title: "Fullstack Engineer",
+    location: "Remote",
+    description: "We are an asynchronous team with flexible working hours.",
+  });
+  assertEquals(asyncJob.isAsync, true);
+  assertEquals(asyncJob.timezoneNote, "⚡ Async-first / Flexible Hours");
+
+  const usOverlapJob = detectTimezoneAndAsync({
+    title: "Senior Go Developer",
+    location: "Remote",
+    description: "Requires minimum 4 hours overlap with EST business hours.",
+  });
+  assertEquals(usOverlapJob.isAsync, false);
+  assertEquals(usOverlapJob.timezoneNote, "Requires US Overlap");
+
+  const apacJob = detectTimezoneAndAsync({
+    title: "Backend Engineer",
+    location: "Remote - APAC",
+    description: "Hiring in Singapore, Australia, or Indonesia timezone.",
+  });
+  assertEquals(apacJob.timezoneNote, "🌏 APAC Friendly");
+});
+
+Deno.test("computeMatchScore applies bonus for async work and verified worldwide/APAC companies", () => {
+  const baseScore = computeMatchScore(
+    {
+      title: "Senior Fullstack Engineer",
+      location: "Remote",
+      description: "TypeScript, React, Go",
+      remote: true,
+    },
+    profile,
+    "eligible",
+  );
+
+  const boostedScore = computeMatchScore(
+    {
+      title: "Senior Fullstack Engineer",
+      location: "Remote",
+      description: "TypeScript, React, Go",
+      remote: true,
+    },
+    profile,
+    "eligible",
+    { isAsync: true, companyRegion: "worldwide" },
+  );
+
+  assertEquals(boostedScore >= baseScore + 10, true);
 });

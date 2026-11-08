@@ -1,16 +1,40 @@
 :root {
-  --bg: #0b0f17;
-  --surface: #131a26;
-  --surface-hover: #1a2434;
-  --border: #253247;
-  --text: #e6edf5;
-  --muted: #8b9bb4;
-  --accent: #3ecf8e;
-  --accent-dim: rgba(62, 207, 142, 0.14);
-  --warn: #f59e0b;
+  /* Obsidian Telemetry Tokens (DESIGN.md Section 2.1) */
+  --surface-lowest: #0a0e17;
+  --surface: #0f131c;
+  --surface-dim: #0f131c;
+  --surface-container-low: #181b25;
+  --surface-container: #1e222f;
+  --surface-container-high: #282d3c;
+  --border-subtle: #1e293b;
+  --border-focus: #06b6d4;
+
+  --primary: #06b6d4;
+  --primary-hover: #0891b2;
+  --primary-glow: rgba(6, 182, 212, 0.35);
+  --primary-muted: rgba(6, 182, 212, 0.1);
+
+  --status-emerald: #10b981;
+  --status-amber: #f59e0b;
+  --status-rose: #f43f5e;
+  --status-sky: #38bdf8;
+
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --text-muted: #475569;
+
+  /* Compatibility bindings */
+  --bg: var(--surface-lowest);
+  --border: var(--border-subtle);
+  --text: var(--text-primary);
+  --muted: var(--text-secondary);
+  --accent: var(--primary);
+  --accent-dim: var(--primary-muted);
+  --warn: var(--status-amber);
   --warn-dim: rgba(245, 158, 11, 0.15);
-  --danger: #ef4444;
-  --danger-dim: rgba(239, 68, 68, 0.15);
+  --danger: var(--status-rose);
+  --danger-dim: rgba(244, 63, 94, 0.15);
 }
 
 * {
@@ -481,4 +505,570 @@ th {
   background: var(--accent);
   color: #0b0f17;
 }
+
+/* ==========================================================================
+   Obsidian Telemetry — AppShell & Component Library (DESIGN.md)
+   ========================================================================== */
+
+/* 1. AppShell Layout */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--surface-lowest);
+  color: var(--text-primary);
+}
+
+.app-sidebar {
+  width: 256px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 20;
+}
+
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.sidebar-brand-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--surface-container);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.sidebar-brand-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.sidebar-brand-version {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  color: var(--primary);
+  background: var(--primary-muted);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.sidebar-nav {
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border-left: 2px solid transparent;
+}
+
+.sidebar-link:hover {
+  background: var(--surface-container);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.sidebar-link.active {
+  background: var(--primary-muted);
+  color: var(--primary);
+  font-weight: 600;
+  border-left-color: var(--primary);
+}
+
+.sidebar-link-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-badge {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-container-high);
+  color: var(--text-secondary);
+}
+
+.sidebar-link.active .sidebar-badge {
+  background: var(--primary);
+  color: #0a0e17;
+  font-weight: 700;
+}
+
+/* Sidebar Bottom Telemetry Widget */
+.sidebar-telemetry {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(10, 14, 23, 0.5);
+}
+
+.telemetry-header {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.telemetry-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-emerald);
+  box-shadow: 0 0 6px var(--status-emerald);
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.telemetry-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  padding: 3px 0;
+  color: var(--text-secondary);
+}
+
+.telemetry-val {
+  color: var(--status-emerald);
+  font-weight: 600;
+}
+
+/* 2. Top Telemetry Header */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.top-telemetry-header {
+  height: 52px;
+  background: rgba(15, 19, 28, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  gap: 16px;
+}
+
+.header-status-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.status-indicator-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--status-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  font-weight: 500;
+}
+
+.header-stream-line {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  .header-stream-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.header-utility-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.command-bar-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-container);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.command-bar-hint:hover {
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+}
+
+.kbd-badge {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  background: var(--surface-container-high);
+  color: var(--text-secondary);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+}
+
+.user-identity-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--surface-container);
+  border: 1px solid var(--border-subtle);
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.user-avatar-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+/* 3. Main Viewport Container */
+.viewport-content {
+  padding: 20px;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* 4. Telemetry Stat KPI Cards (DESIGN.md 4.3) */
+.telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.telemetry-card {
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.telemetry-card:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.telemetry-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.telemetry-card-title {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.telemetry-card-badge {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-container);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-subtle);
+}
+
+.telemetry-card-metric {
+  font-size: 26px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.telemetry-card-metric small {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.telemetry-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.telemetry-card-highlight {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+/* 5. Quick Stack Filter Bar */
+.quick-stack-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.quick-stack-label {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.quick-stack-chip {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.quick-stack-chip:hover {
+  background: var(--surface-container);
+  border-color: var(--border-focus);
+  color: var(--primary);
+}
+
+.quick-stack-chip.active {
+  background: var(--primary-muted);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+/* 6. Primary Action Button with Neon Glow (DESIGN.md 4.1) */
+.btn-primary-batch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #061e27;
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  box-shadow: 0 0 14px var(--primary-glow);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-primary-batch:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-primary-batch:active {
+  transform: scale(0.98);
+}
+
+/* 7. Cyber Job Card Styling */
+.cyber-card {
+  background: var(--surface-container-low);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.cyber-card:hover {
+  border-color: rgba(6, 182, 212, 0.4);
+  background: #141924;
+}
+
+.cyber-card-main {
+  display: flex;
+  gap: 14px;
+}
+
+.cyber-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--border-subtle);
+  color: var(--primary);
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cyber-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.cyber-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.cyber-job-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  line-height: 1.3;
+}
+
+.cyber-job-title:hover {
+  color: var(--primary);
+}
+
+.cyber-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.cyber-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.cyber-tag {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
+.cyber-footer {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-tertiary);
+}
+
 

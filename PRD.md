@@ -54,9 +54,10 @@ Pengguna tunggal: developer fullstack/frontend/backend (Go, React/Next.js, Flutt
 
 ### V1 (P1)
 - Dashboard web static (Next.js/Vite) di hosting gratis, membaca Supabase lewat anon key + login (Supabase Auth) + RLS.
-- Edge Function `discover` mingguan: ekstrak slug ATS dari feed agregator gratis, thread HN "Who is hiring", dan daftar perusahaan remote di GitHub.
-- Adapter tambahan: Workable, SmartRecruiters, Recruitee.
-- Skor kecocokan dan pengurutan.
+- Edge Function `discover` mingguan: ekstrak slug ATS dari feed agregator gratis, thread HN "Who is hiring", dan repositori GitHub `remoteintech/remote-jobs` (profil perusahaan worldwide & remote-first).
+- Deteksi zona waktu & budaya asynchronous (`is_async`, `timezone_note`) untuk kompatibilitas zona WIB/UTC+7.
+- Adapter tambahan: Workable, SmartRecruiters, Recruitee, dan Custom HTML.
+- Skor kecocokan dan pengurutan (termasuk bonus perusahaan remote global dan async).
 - Tombol/perintah Telegram untuk menandai lowongan (via Edge Function webhook).
 
 ### V2 (P2)

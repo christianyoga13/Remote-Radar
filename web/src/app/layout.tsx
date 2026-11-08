@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
-import { Header } from "@/components/layout/Header";
+import { AppSidebar } from "@/components/layout/AppSidebar";
+import { TopHeader } from "@/components/layout/TopHeader";
 import { AuthBanner } from "@/components/auth/AuthBanner";
 
 export const metadata: Metadata = {
-  title: "Remote Radar — Direct ATS Vacancy Monitor",
+  title: "Remote Radar — Obsidian Telemetry",
   description:
-    "Personal remote job vacancy monitor powered by Supabase Edge Functions & pg_cron.",
+    "High-density remote developer vacancy monitor and telemetry engine powered by Supabase.",
 };
 
 export default function RootLayout({
@@ -19,10 +20,15 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
         <Providers>
-          <div className="container">
-            <Header />
-            <AuthBanner />
-            <main>{children}</main>
+          <div className="app-shell">
+            <AppSidebar />
+            <div className="app-main">
+              <TopHeader />
+              <div className="viewport-content">
+                <AuthBanner />
+                <main>{children}</main>
+              </div>
+            </div>
           </div>
         </Providers>
       </body>

@@ -13,6 +13,8 @@ export interface Job {
   url: string;
   description?: string;
   postedAt?: string;
+  timezone_note?: string;
+  is_async?: boolean;
 }
 
 export interface Adapter {
@@ -49,6 +51,9 @@ export interface CompanyRow {
   fail_count: number;
   last_status: string | null;
   last_fetched_at: string | null;
+  region?: string | null;
+  remote_policy?: string | null;
+  source?: string | null;
 }
 
 export const MAX_DESCRIPTION_CHARS = 4000;

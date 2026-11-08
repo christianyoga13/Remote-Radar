@@ -66,9 +66,10 @@ Greenhouse sebaiknya tanpa `?content=true` di batch rutin karena responsnya besa
 
 Edge Function `discover`, jalan mingguan:
 
-1. **Link apply di feed agregator gratis** (mis. Remotive, RemoteOK, We Work Remotely RSS, Arbeitnow, Jobicy): ekstrak slug dari URL ATS dengan regex. Dipakai hanya untuk menemukan perusahaan. Baca syarat atribusi dan rate limit masing-masing.
-2. **HN "Who is hiring"** lewat Algolia HN API (`hn.algolia.com/api/v1`): ekstrak URL ATS dan nama perusahaan dari komentar.
-3. **Seed manual**: CSV hasil dork `site:jobs.ashbyhq.com` yang dijalankan sendiri di browser, lalu import lewat Dashboard.
+1. **GitHub `remoteintech/remote-jobs`** (`src/companies/*.md`): Ambil profil perusahaan ramah-remote terverifikasi. Filter: `region in ('worldwide', 'asia-pacific')` dan `remote_policy in ('fully-remote', 'remote-first')`. Menggunakan resolver ATS bertingkat: regex langsung pada `careers_url`, fallback inspeksi script embed ATS pada custom career page.
+2. **Link apply di feed agregator gratis** (mis. Remotive, RemoteOK, We Work Remotely RSS, Arbeitnow, Jobicy): ekstrak slug dari URL ATS dengan regex. Dipakai hanya untuk menemukan perusahaan. Baca syarat atribusi dan rate limit masing-masing.
+3. **HN "Who is hiring"** lewat Algolia HN API (`hn.algolia.com/api/v1`): ekstrak URL ATS dan nama perusahaan dari komentar.
+4. **Seed manual**: CSV hasil dork `site:jobs.ashbyhq.com` yang dijalankan sendiri di browser, lalu import lewat Dashboard.
 
 Slug baru masuk `companies` dengan `active = false` sampai satu fetch percobaan berhasil.
 
@@ -173,9 +174,10 @@ Dievaluasi berurutan, daftar kata ada di `settings.location_rules`:
 
 Jika keduanya muncul, `restricted` menang, kecuali Indonesia/APAC/worldwide disebut eksplisit di judul atau lokasi.
 
-### 5.6 Match score
+### 5.6 Match score & Timezone Detection
 
-0-100 dari: kecocokan judul dengan role target, jumlah stack yang muncul, kesesuaian level, dan penalti blacklist. Bobot di `settings.profile`.
+- **Match Score (0-100)**: dihitung dari kecocokan judul dengan role target (45 pt), jumlah stack yang muncul (hingga 36 pt), kesesuaian level (10 pt), penalti blacklist (0 pt), bonus lokasi eligible (9 pt), bonus lowongan *asynchronous/fleksibel* (+5 pt), dan bonus perusahaan terverifikasi remote global dari remoteintech (+5 pt).
+- **Timezone & Async Classifier**: mendeteksi apakah pekerjaan berbudaya *async-first* / jam kerja fleksibel vs mewajibkan overlap jam kerja tertentu (US EST/PST, EU CET, atau APAC friendly) agar memudahkan pelamar di zona waktu Indonesia (WIB / UTC+7).
 
 ## 6. Skema database
 
@@ -183,9 +185,12 @@ Jika keduanya muncul, `restricted` menang, kecuali Indonesia/APAC/worldwide dise
 create table companies (
   id bigserial primary key,
   name text not null,
-  ats text not null check (ats in ('greenhouse','lever','ashby','workable','smartrecruiters','recruitee')),
+  ats text not null check (ats in ('greenhouse','lever','ashby','workable','smartrecruiters','recruitee','remotive','arbeitnow','custom_html')),
   slug text not null,
   careers_url text,
+  region text check (region is null or region in ('worldwide','asia-pacific','americas','europe','americas-europe','other')),
+  remote_policy text check (remote_policy is null or remote_policy in ('fully-remote','remote-first','remote-friendly','hybrid')),
+  source text not null default 'manual',
   active boolean not null default true,
   fail_count int not null default 0,
   last_status text,
@@ -209,6 +214,8 @@ create table jobs (
   last_seen_at timestamptz not null default now(),
   closed_at timestamptz,
   match_score int,
+  timezone_note text,
+  is_async boolean not null default false,
   notified_at timestamptz,
   status text not null default 'new' check (status in ('new','saved','applied','ignored')),
   unique (company_id, external_id)

@@ -1,6 +1,10 @@
 import { getAdapter } from "../_shared/ats/index.ts";
 import { createServiceClient, loadSettings } from "../_shared/db.ts";
-import { classifyLocation, computeMatchScore } from "../_shared/filter.ts";
+import {
+  classifyLocation,
+  computeMatchScore,
+  detectTimezoneAndAsync,
+} from "../_shared/filter.ts";
 import { NotifiableJob, sendTelegramDigest } from "../_shared/telegram.ts";
 import { CompanyRow, truncateDescription } from "../_shared/types.ts";
 
@@ -187,10 +191,12 @@ Deno.serve(async (req: Request) => {
           jobsNew++;
         }
         const locationClass = classifyLocation(job, settings.locationRules);
+        const { timezoneNote, isAsync } = detectTimezoneAndAsync(job);
         const matchScore = computeMatchScore(
           job,
           settings.profile,
           locationClass,
+          { isAsync, companyRegion: company.region },
         );
 
         return {
@@ -207,6 +213,8 @@ Deno.serve(async (req: Request) => {
           last_seen_at: nowIso,
           closed_at: null,
           match_score: matchScore,
+          timezone_note: timezoneNote ?? null,
+          is_async: isAsync,
           ...(isTombstoned ? { notified_at: nowIso } : {}),
         };
       });
