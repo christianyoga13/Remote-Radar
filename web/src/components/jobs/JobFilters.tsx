@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { LocationClass, JobStatus, SeniorityLevel } from "@/types";
+import { LocationClass, JobStatus, SeniorityLevel, SortOption } from "@/types";
 import { useDashboard } from "@/hooks/useDashboard";
 
 export function JobFilters() {
   const {
     search,
     setSearch,
+    sortBy,
+    setSortBy,
     locFilter,
     setLocFilter,
     statusFilter,
@@ -133,6 +135,26 @@ export function JobFilters() {
         </select>
 
         <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
+          style={{
+            padding: "8px 12px",
+            background: "var(--surface-container-low)",
+            borderColor: "var(--border-subtle)",
+            borderRadius: 6,
+            fontSize: 12,
+            color: sortBy.startsWith("score") ? "var(--primary)" : "var(--text-primary)",
+            fontWeight: 500,
+          }}
+          title="Sort lowongan"
+        >
+          <option value="score_desc">🎯 Match Score Tertinggi</option>
+          <option value="published_desc">⏱️ Paling Baru (Published Time)</option>
+          <option value="score_asc">📉 Match Score Terendah</option>
+          <option value="published_asc">⏳ Paling Lama</option>
+        </select>
+
+        <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as JobStatus | "all")}
           style={{
@@ -148,6 +170,27 @@ export function JobFilters() {
           <option value="saved">Saved</option>
           <option value="applied">Applied</option>
           <option value="ignored">Ignored</option>
+        </select>
+
+        <select
+          value={minScore}
+          onChange={(e) => setMinScore(Number(e.target.value))}
+          style={{
+            padding: "8px 10px",
+            background: "var(--surface-container-low)",
+            borderColor: "var(--border-subtle)",
+            borderRadius: 6,
+            fontSize: 12,
+            color: minScore >= 60 ? "var(--primary)" : "var(--text-primary)",
+            fontWeight: 500,
+          }}
+          title="Filter ambang skor minimal"
+        >
+          <option value="0">Score: Semua (0%+)</option>
+          <option value="35">Score: ≥ 35% (Pass)</option>
+          <option value="60">Score: ≥ 60% (Medium Match)</option>
+          <option value="80">Score: ≥ 80% (High Match 🎯)</option>
+          <option value="90">Score: ≥ 90% (Top Match 🚀)</option>
         </select>
 
         <button

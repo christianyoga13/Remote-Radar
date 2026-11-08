@@ -1,6 +1,11 @@
 export type LocationClass = "eligible" | "restricted" | "unknown";
 export type JobStatus = "new" | "saved" | "applied" | "ignored";
 export type SeniorityLevel = "all" | "junior" | "mid" | "senior" | "lead";
+export type SortOption =
+  | "score_desc"
+  | "published_desc"
+  | "published_asc"
+  | "score_asc";
 
 export function detectJobLevel(
   title: string,

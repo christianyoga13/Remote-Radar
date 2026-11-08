@@ -18,6 +18,7 @@ import {
   ProfileSettings,
   RunRow,
   SeniorityLevel,
+  SortOption,
   detectJobLevel,
 } from "@/types";
 import {
@@ -57,6 +58,8 @@ interface DashboardContextType {
   setMinScore: (v: number) => void;
   search: string;
   setSearch: (v: string) => void;
+  sortBy: SortOption;
+  setSortBy: (v: SortOption) => void;
   expandedJobId: number | null;
   setExpandedJobId: React.Dispatch<React.SetStateAction<number | null>>;
   filteredJobs: JobRow[];
@@ -124,6 +127,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [companyFilter, setCompanyFilter] = useState<string>("all");
   const [minScore, setMinScore] = useState<number>(35);
   const [search, setSearch] = useState<string>("");
+  const [sortBy, setSortBy] = useState<SortOption>("score_desc");
   const [expandedJobId, setExpandedJobId] = useState<number | null>(null);
 
   // Settings JSON
@@ -567,7 +571,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   const filteredJobs = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return jobs.filter((j) => {
+    const filtered = jobs.filter((j) => {
       if (locFilter !== "all" && j.location_class !== locFilter) return false;
       if (statusFilter !== "all" && j.status !== statusFilter) return false;
       if (levelFilter !== "all") {
@@ -586,7 +590,23 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       }
       return true;
     });
-  }, [jobs, locFilter, statusFilter, levelFilter, companyFilter, minScore, search]);
+
+    return filtered.sort((a, b) => {
+      if (sortBy === "score_desc") {
+        const diff = (b.match_score ?? 0) - (a.match_score ?? 0);
+        if (diff !== 0) return diff;
+        return new Date(b.first_seen_at).getTime() - new Date(a.first_seen_at).getTime();
+      }
+      if (sortBy === "score_asc") {
+        return (a.match_score ?? 0) - (b.match_score ?? 0);
+      }
+      if (sortBy === "published_asc") {
+        return new Date(a.first_seen_at).getTime() - new Date(b.first_seen_at).getTime();
+      }
+      // published_desc
+      return new Date(b.first_seen_at).getTime() - new Date(a.first_seen_at).getTime();
+    });
+  }, [jobs, locFilter, statusFilter, levelFilter, companyFilter, minScore, search, sortBy]);
 
   const value = {
     userEmail,
@@ -612,6 +632,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     setMinScore,
     search,
     setSearch,
+    sortBy,
+    setSortBy,
     expandedJobId,
     setExpandedJobId,
     filteredJobs,
